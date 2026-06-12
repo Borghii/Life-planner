@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historial - Dashboard Personal</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-page="historial">
+  <div class="app-shell">
+    <header>
+      <div class="header-left" id="date-display">-</div>
+      <div class="header-center" id="time-display">00:00:00</div>
+      <div class="header-right">
+        <div class="badge">Historial</div>
+      </div>
+    </header>
+
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/biblioteca">Biblioteca</a>
+      <a href="/planificacion">Planificacion</a>
+      <a href="/historial" class="active">Historial</a>
+    </nav>
+
+    <main class="page-main historial-page">
+      <div class="hist-layout">
+        <section class="panel-card hist-main-card">
+          <div class="panel-card-header">
+            <button id="hist-prev" class="btn-secondary">&larr;</button>
+            <h1 class="panel-card-title" id="hist-year-title">2026</h1>
+            <button id="hist-next" class="btn-secondary">&rarr;</button>
+          </div>
+          <div class="panel-card-body">
+            <div class="hist-stats" id="hist-stats"></div>
+            <div class="hist-heatmap" id="hist-heatmap"></div>
+          </div>
+        </section>
+
+        <section class="panel-card hist-detail-card" id="hist-detail" hidden>
+          <div class="panel-card-header">
+            <h2 class="panel-card-title" id="hist-detail-title">--</h2>
+            <button class="btn-secondary" id="hist-detail-close">Cerrar</button>
+          </div>
+          <div class="panel-card-body" id="hist-detail-body"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modal-overlay" hidden>
+    <div class="modal-box" id="modal-box">
+      <div class="modal-header">
+        <h2 id="modal-title" class="modal-title">-</h2>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>

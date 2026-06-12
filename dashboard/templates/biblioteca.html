@@ -1,0 +1,102 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biblioteca - Dashboard Personal</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-page="biblioteca">
+  <div class="app-shell">
+    <header>
+      <div class="header-left" id="date-display">-</div>
+      <div class="header-center" id="time-display">00:00:00</div>
+      <div class="header-right">
+        <div class="badge">Biblioteca</div>
+      </div>
+    </header>
+
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/biblioteca" class="active">Biblioteca</a>
+      <a href="/planificacion">Planificacion</a>
+      <a href="/historial">Historial</a>
+    </nav>
+
+    <main class="page-main">
+      <div class="library-layout">
+        <section class="panel-card">
+          <div class="panel-card-header">
+            <h1 class="panel-card-title">Apartados</h1>
+            <button class="btn-secondary" id="apartado-reset-btn">Nuevo</button>
+          </div>
+          <div class="panel-card-body stack">
+            <div id="apartado-list" class="stack"></div>
+
+            <form id="apartado-form" class="stack">
+              <input type="hidden" id="apartado-id">
+              <input class="input" id="apartado-nombre" type="text" placeholder="Nombre apartado" required>
+              <div class="row">
+                <input class="input" id="apartado-color" type="color" value="#7a9e87" required>
+                <input class="input" id="apartado-orden" type="number" min="0" value="0" required>
+              </div>
+              <div class="form-foot">
+                <button type="button" class="btn-secondary" id="apartado-cancel-btn">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-card-header">
+            <h2 class="panel-card-title" id="selected-apartado-title">Tareas</h2>
+            <span class="badge" id="task-count-badge">0 tareas</span>
+          </div>
+          <div class="panel-card-body stack">
+            <form id="task-form" class="stack">
+              <input type="hidden" id="task-id">
+              <input class="input" id="task-nombre" type="text" placeholder="Nombre tarea" required>
+              <div class="row">
+                <input class="input" id="task-prioridad" type="number" min="1" max="5" value="2" required>
+                <input class="input" id="task-pomodoros" type="number" min="1" value="1" required>
+              </div>
+              <span class="muted-note">Prioridad: 1 baja · 5 alta</span>
+              <div class="form-foot">
+                <button type="button" class="btn-secondary" id="task-cancel-btn">Cancelar</button>
+                <button type="submit" class="btn-primary">Guardar tarea</button>
+              </div>
+            </form>
+
+            <div id="task-list" class="stack"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="action-modal">
+    <div class="modal">
+      <div class="modal-title">Accion de tarea</div>
+      <form class="modal-form" id="action-form">
+        <input type="hidden" id="action-id">
+        <input type="hidden" id="action-task-id">
+        <input id="action-label" type="text" placeholder="Label (ej: PDF, Anki)" required>
+        <select id="action-tipo" required>
+          <option value="url">url</option>
+          <option value="app">app</option>
+          <option value="file">file</option>
+        </select>
+        <input id="action-valor" type="text" placeholder="URL o ruta/ejecutable" required>
+      </form>
+      <div class="modal-footer">
+        <button class="btn-cancel" data-close-modal="action-modal">Cancelar</button>
+        <button class="btn-confirm" id="save-action-btn">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>

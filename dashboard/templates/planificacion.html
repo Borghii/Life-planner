@@ -1,0 +1,77 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planificacion - Dashboard Personal</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-page="planificacion">
+  <div class="app-shell">
+    <header>
+      <div class="header-left" id="date-display">-</div>
+      <div class="header-center" id="time-display">00:00:00</div>
+      <div class="header-right">
+        <div class="badge">Plan semanal</div>
+      </div>
+    </header>
+
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/biblioteca">Biblioteca</a>
+      <a href="/planificacion" class="active">Planificacion</a>
+      <a href="/historial">Historial</a>
+    </nav>
+
+    <main class="page-main planning-page">
+      <section class="panel-card planner-section">
+        <div class="panel-card-body">
+          <div class="planning-header">
+            <h2 class="panel-card-title">Planificacion semanal</h2>
+            <div class="week-controls">
+              <button class="btn-secondary" id="week-prev">&#8592;</button>
+              <input class="input" id="week-start-input" type="date">
+              <button class="btn-secondary" id="week-go">Ir</button>
+              <button class="btn-secondary" id="week-next">&#8594;</button>
+              <button class="btn-secondary config-toggle" id="config-toggle" title="Configuracion">&#9881;</button>
+            </div>
+          </div>
+
+          <div class="config-drawer" id="config-drawer" hidden>
+            <div class="config-drawer-inner">
+              <p class="muted-note">Rango horario para timeline diaria y adaptacion.</p>
+              <form id="config-form" class="config-form-row">
+                <div class="row">
+                  <input class="input" id="config-day-start" type="number" min="0" max="23" required>
+                  <input class="input" id="config-day-end" type="number" min="1" max="24" required>
+                </div>
+                <input class="input" id="config-city" type="text" placeholder="Ciudad" required>
+                <div class="row">
+                  <input class="input" id="config-lat" type="number" step="0.0001" required>
+                  <input class="input" id="config-lon" type="number" step="0.0001" required>
+                </div>
+                <button type="submit" class="btn-primary">Guardar</button>
+              </form>
+              <span class="error-text" id="config-error"></span>
+            </div>
+          </div>
+
+          <div class="planner-panels">
+            <aside class="task-pool" id="task-pool">
+              <div class="task-pool-search">
+                <input class="input" id="pool-search" placeholder="Buscar tarea..." type="text">
+              </div>
+              <div id="pool-groups"></div>
+              <div class="task-pool-hint">Arrastra una tarea a un dia, o haz clic para seleccionar</div>
+            </aside>
+            <div class="week-grid" id="week-grid"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>

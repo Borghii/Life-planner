@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #0f0e0d;
+  --color-surface: #1a1917;
+  --color-surface-raised: #211f1c;
+  --color-surface-hover: #2a2723;
+  --color-border: #2e2b27;
+  --color-border-mid: #3d3830;
+
+  --color-cream: #f0e6d3;
+  --color-cream-dim: #c8a97e;
+  --color-muted: #7a6e61;
+
+  --color-gold: #d4943a;
+  --color-gold-bright: #f0b855;
+  --color-gold-dim: #8a6030;
+  --color-gold-bg: #2a1e0d;
+
+  --color-sage: #5a8a6a;
+  --color-sage-dim: #2d4a38;
+  --color-sage-bright: #8ab89a;
+
+  --color-urgent: #c45a3a;
+  --color-urgent-dim: #4a2218;
+
+  --color-info: #5a7ab5;
+
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #0f0e0d;
+  color: #f0e6d3;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1917;
+}
+::-webkit-scrollbar-thumb {
+  background: #3d3830;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #d4943a;
+}
+
+/* Selection styling */
+::selection {
+  background: #d4943a33;
+  color: #f0b855;
+}
+
+/* Custom utilities for noise texture */
+.noise-overlay::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+}
