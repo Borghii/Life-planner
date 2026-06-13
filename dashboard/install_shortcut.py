@@ -13,6 +13,40 @@ from desktop_support import (
 )
 
 
+def get_shortcut_paths(home_dir: Path, appdata_dir: Path) -> list[Path]:
+    return [
+        home_dir / "Desktop" / f"{APP_NAME}.lnk",
+        appdata_dir / "Microsoft" / "Windows" / "Start Menu" / "Programs" / f"{APP_NAME}.lnk",
+        appdata_dir
+        / "Microsoft"
+        / "Windows"
+        / "Start Menu"
+        / "Programs"
+        / "Startup"
+        / f"{APP_NAME}.lnk",
+    ]
+
+
+def remove_legacy_startup_launchers(appdata_dir: Path) -> list[Path]:
+    startup_dir = (
+        appdata_dir
+        / "Microsoft"
+        / "Windows"
+        / "Start Menu"
+        / "Programs"
+        / "Startup"
+    )
+    removed_paths = []
+
+    for filename in ("start-dashboard.vbs", "start-dashboard.lnk"):
+        launcher_path = startup_dir / filename
+        if launcher_path.exists():
+            launcher_path.unlink()
+            removed_paths.append(launcher_path)
+
+    return removed_paths
+
+
 def create_shortcut(
     shortcut_path: Path,
     target_path: Path,
@@ -76,15 +110,13 @@ def main() -> int:
     icon_path = ensure_icon_file()
     pythonw_path = resolve_pythonw_path()
     desktop_app_path = BASE_DIR / "desktop_app.py"
-    desktop_dir = Path.home() / "Desktop"
-    start_menu_dir = Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+    home_dir = Path.home()
+    appdata_dir = Path(os.environ["APPDATA"])
     arguments = f'"{desktop_app_path}"'
     description = "Abre Life Planner en una ventana de escritorio propia."
 
-    created_paths = [
-        desktop_dir / f"{APP_NAME}.lnk",
-        start_menu_dir / f"{APP_NAME}.lnk",
-    ]
+    removed_paths = remove_legacy_startup_launchers(appdata_dir)
+    created_paths = get_shortcut_paths(home_dir, appdata_dir)
 
     for shortcut_path in created_paths:
         create_shortcut(
@@ -99,6 +131,11 @@ def main() -> int:
     print("Accesos directos creados:")
     for shortcut_path in created_paths:
         print(f"- {shortcut_path}")
+
+    if removed_paths:
+        print("Lanzadores antiguos eliminados:")
+        for launcher_path in removed_paths:
+            print(f"- {launcher_path}")
 
     return 0
 

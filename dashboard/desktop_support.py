@@ -18,6 +18,9 @@ APP_URL = f"http://{APP_HOST}:{APP_PORT}"
 BASE_DIR = Path(__file__).resolve().parent
 RESOURCE_DIR = BASE_DIR / "resources"
 ICON_PATH = RESOURCE_DIR / "life-planner.ico"
+APP_DATA_DIR = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "Life Planner"
+WEBVIEW_STORAGE_DIR = APP_DATA_DIR / "WebView2"
+DESKTOP_LOG_PATH = APP_DATA_DIR / "desktop.log"
 
 
 def set_app_user_model_id() -> None:
