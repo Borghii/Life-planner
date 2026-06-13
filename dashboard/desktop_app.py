@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import atexit
+import ctypes
+import os
 import threading
+from ctypes import wintypes
 
 from werkzeug.serving import make_server
 
@@ -15,6 +18,34 @@ from desktop_support import (
     show_error,
     wait_for_port,
 )
+
+_SINGLE_INSTANCE_MUTEX = None
+_MUTEX_ALREADY_EXISTS = 183
+_MUTEX_NAME = "Local\\LifePlannerDesktopApp"
+
+
+def acquire_single_instance() -> bool:
+    global _SINGLE_INSTANCE_MUTEX
+
+    if os.name != "nt":
+        return True
+
+    kernel32 = ctypes.windll.kernel32
+    kernel32.CreateMutexW.argtypes = (wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR)
+    kernel32.CreateMutexW.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    mutex = kernel32.CreateMutexW(None, False, _MUTEX_NAME)
+    if not mutex:
+        raise ctypes.WinError()
+
+    if kernel32.GetLastError() == _MUTEX_ALREADY_EXISTS:
+        kernel32.CloseHandle(mutex)
+        return False
+
+    _SINGLE_INSTANCE_MUTEX = mutex
+    atexit.register(kernel32.CloseHandle, mutex)
+    return True
 
 
 class BackgroundServer(threading.Thread):
@@ -52,6 +83,10 @@ def build_webview_error_message(error: Exception) -> str:
 
 def main() -> int:
     set_app_user_model_id()
+
+    if not acquire_single_instance():
+        show_error("Life Planner ya esta abierto.")
+        return 0
 
     try:
         import webview

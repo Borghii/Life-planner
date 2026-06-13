@@ -50,10 +50,13 @@ class EconomyApiTest(unittest.TestCase):
             json={"plan_dia_id": plan_id, "completada": value},
         )
 
-    def create_reward(self, price=30):
+    def create_reward(self, duration_minutes=60):
         response = self.client.post(
             "/api/rewards",
-            json={"name": "Una hora de juego", "price_points": price},
+            json={
+                "name": "Tiempo de juego",
+                "duration_minutes": duration_minutes,
+            },
         )
         self.assertEqual(response.status_code, 201)
         return response.get_json()
@@ -133,6 +136,23 @@ class EconomyApiTest(unittest.TestCase):
         blocked = self.redeem(reward["id"])
         self.assertEqual(blocked.status_code, 409)
         self.assertEqual(blocked.get_json()["error"], "Saldo insuficiente")
+
+    def test_reward_price_is_calculated_from_duration(self):
+        half_hour = self.create_reward(30)
+        hour_and_half = self.create_reward(90)
+        odd_duration = self.create_reward(45)
+
+        self.assertEqual(half_hour["price_points"], 15)
+        self.assertEqual(hour_and_half["price_points"], 45)
+        self.assertEqual(odd_duration["price_points"], 23)
+
+        updated = self.client.put(
+            f"/api/rewards/{half_hour['id']}",
+            json={"duration_minutes": 120, "price_points": 1},
+        )
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.get_json()["price_points"], 60)
+        self.assertEqual(updated.get_json()["duration_minutes"], 120)
 
     def test_cancel_pending_pass_refunds_full_price(self):
         self.add_points(30)

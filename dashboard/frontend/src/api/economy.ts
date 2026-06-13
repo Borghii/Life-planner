@@ -3,15 +3,15 @@ import type { EconomyPayload, Reward, RewardPass } from './types'
 
 export const getEconomy = () => api<EconomyPayload>('/api/economy')
 
-export const createReward = (name: string, price_points = 30) =>
+export const createReward = (name: string, duration_minutes = 60) =>
   api<Reward>('/api/rewards', {
     method: 'POST',
-    body: JSON.stringify({ name, price_points }),
+    body: JSON.stringify({ name, duration_minutes }),
   })
 
 export const updateReward = (
   id: number,
-  payload: { name?: string; price_points?: number; active?: boolean },
+  payload: { name?: string; duration_minutes?: number; active?: boolean },
 ) =>
   api<Reward>(`/api/rewards/${id}`, {
     method: 'PUT',

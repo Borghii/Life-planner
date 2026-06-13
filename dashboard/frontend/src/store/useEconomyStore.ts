@@ -28,8 +28,8 @@ interface EconomyStore {
   error: string | null
   refresh: () => Promise<void>
   syncTaskCompletion: (result: TaskCompletionResult) => void
-  createReward: (name: string, price: number) => Promise<void>
-  updateReward: (id: number, name: string, price: number) => Promise<void>
+  createReward: (name: string, durationMinutes: number) => Promise<void>
+  updateReward: (id: number, name: string, durationMinutes: number) => Promise<void>
   archiveReward: (id: number) => Promise<void>
   redeemReward: (id: number) => Promise<RewardPass>
   cancelPass: (id: number) => Promise<void>
@@ -80,10 +80,10 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
     void get().refresh()
   },
 
-  createReward: async (name, price) => {
+  createReward: async (name, durationMinutes) => {
     set({ error: null })
     try {
-      await createReward(name, price)
+      await createReward(name, durationMinutes)
       await get().refresh()
     } catch (error) {
       set({ error: message(error) })
@@ -91,10 +91,10 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
     }
   },
 
-  updateReward: async (id, name, price) => {
+  updateReward: async (id, name, durationMinutes) => {
     set({ error: null })
     try {
-      await updateReward(id, { name, price_points: price })
+      await updateReward(id, { name, duration_minutes: durationMinutes })
       await get().refresh()
     } catch (error) {
       set({ error: message(error) })

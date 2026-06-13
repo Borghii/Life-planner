@@ -164,9 +164,11 @@ export function PomodoroPage() {
   } = usePomodoroStore()
   const {
     balance,
+    rewards,
     passes,
     initialized: economyInitialized,
     refresh: refreshEconomy,
+    redeemReward,
   } = useEconomyStore()
 
   const [today] = useState(() => toDateStr())
@@ -178,6 +180,7 @@ export function PomodoroPage() {
   const [dropOver, setDropOver] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [distractionText, setDistractionText] = useState('')
+  const [redeemingRewardId, setRedeemingRewardId] = useState<number | null>(null)
 
   const refreshTasks = useCallback(async () => {
     setLoading(true)
@@ -231,6 +234,10 @@ export function PomodoroPage() {
   const leisurePasses = useMemo(
     () => passes.filter((pass) => pass.status === 'pending' || pass.status === 'active'),
     [passes],
+  )
+  const activeRewards = useMemo(
+    () => rewards.filter((reward) => reward.active),
+    [rewards],
   )
 
   const isLeisure = mode === 'leisure'
@@ -319,6 +326,26 @@ export function PomodoroPage() {
     setNotice(cleared ? 'Pase guardado para mas tarde.' : 'Un pase iniciado ya no se puede devolver.')
   }
 
+  async function handleRedeemReward(rewardId: number) {
+    if (redeemingRewardId !== null) return
+
+    setRedeemingRewardId(rewardId)
+    try {
+      const pass = await redeemReward(rewardId)
+      const loaded = !running && !activeTask && !activeLeisurePass
+        ? loadLeisurePass(pass)
+        : false
+      setNotice(loaded
+        ? `Recompensa canjeada y cargada: ${pass.reward_name}`
+        : `Recompensa canjeada. El pase quedo guardado en Pases de ocio.`
+      )
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'No se pudo canjear la recompensa.')
+    } finally {
+      setRedeemingRewardId(null)
+    }
+  }
+
   function handleAddDistraction(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (addDistraction(distractionText)) {
@@ -380,43 +407,85 @@ export function PomodoroPage() {
 
         <div style={taskList}>
           {leftTab === 'passes' ? (
-            leisurePasses.length === 0 ? (
-              <div style={emptyState}>
-                No hay pases. Canjea una recompensa y volve para usar su hora.
+            <>
+              <div style={leisureSectionHeader}>
+                <span>Tus pases</span>
+                <span>{leisurePasses.length}</span>
               </div>
-            ) : (
-              leisurePasses.map((pass) => {
-                const selected = activeLeisurePass?.id === pass.id
-                return (
-                  <article key={pass.id} style={leisurePassCard(selected, pass.status === 'active')}>
-                    <div style={taskTopLine}>
-                      <span style={taskApartado(pass.status === 'active' ? '#f0b855' : '#8ab89a')}>
-                        {pass.status === 'active'
-                          ? pass.timer_running ? 'En curso' : 'Pausado'
-                          : 'Reembolsable'}
-                      </span>
-                      <span style={priorityPill(2)}>{Math.ceil(pass.remaining_seconds / 60)} min</span>
-                    </div>
-                    <div style={taskName(false)}>{pass.reward_name}</div>
-                    <div style={taskNote}>
-                      {pass.status === 'pending'
-                        ? 'Pierde el reembolso recien al pulsar Iniciar.'
-                        : 'Este pase ya fue iniciado y debe consumirse.'}
-                    </div>
-                    <div style={taskActionRow}>
-                      <button
-                        type="button"
-                        disabled={running && !selected}
-                        onClick={() => handleLoadLeisurePass(pass.id)}
-                        style={loadTaskButton(selected, running && !selected)}
-                      >
-                        {selected ? 'Cargado' : pass.status === 'active' ? 'Continuar' : 'Cargar'}
-                      </button>
-                    </div>
-                  </article>
-                )
-              })
-            )
+              {leisurePasses.length === 0 ? (
+                <div style={compactEmpty}>
+                  Todavia no canjeaste ningun pase.
+                </div>
+              ) : (
+                leisurePasses.map((pass) => {
+                  const selected = activeLeisurePass?.id === pass.id
+                  return (
+                    <article key={pass.id} style={leisurePassCard(selected, pass.status === 'active')}>
+                      <div style={taskTopLine}>
+                        <span style={taskApartado(pass.status === 'active' ? '#f0b855' : '#8ab89a')}>
+                          {pass.status === 'active'
+                            ? pass.timer_running ? 'En curso' : 'Pausado'
+                            : 'Reembolsable'}
+                        </span>
+                        <span style={priorityPill(2)}>{Math.ceil(pass.remaining_seconds / 60)} min</span>
+                      </div>
+                      <div style={taskName(false)}>{pass.reward_name}</div>
+                      <div style={taskNote}>
+                        {pass.status === 'pending'
+                          ? 'Pierde el reembolso recien al pulsar Iniciar.'
+                          : 'Este pase ya fue iniciado y debe consumirse.'}
+                      </div>
+                      <div style={taskActionRow}>
+                        <button
+                          type="button"
+                          disabled={running && !selected}
+                          onClick={() => handleLoadLeisurePass(pass.id)}
+                          style={loadTaskButton(selected, running && !selected)}
+                        >
+                          {selected ? 'Cargado' : pass.status === 'active' ? 'Continuar' : 'Cargar'}
+                        </button>
+                      </div>
+                    </article>
+                  )
+                })
+              )}
+
+              <div style={{ ...leisureSectionHeader, marginTop: 14 }}>
+                <span>Canjear recompensa</span>
+                <span>{balance} pts</span>
+              </div>
+              {activeRewards.length === 0 ? (
+                <div style={compactEmpty}>
+                  Crea recompensas desde la seccion Recompensas.
+                </div>
+              ) : (
+                activeRewards.map((reward) => {
+                  const canRedeem = balance >= reward.price_points
+                  const isRedeeming = redeemingRewardId === reward.id
+                  return (
+                    <article key={reward.id} style={pomodoroRewardCard}>
+                      <div style={rewardCopy}>
+                        <span style={rewardDuration}>{reward.duration_minutes} min de ocio</span>
+                        <strong style={rewardTitle}>{reward.name}</strong>
+                      </div>
+                      <div style={rewardRedeemColumn}>
+                        <strong style={rewardPrice}>{reward.price_points} pts</strong>
+                        <button
+                          type="button"
+                          disabled={!canRedeem || redeemingRewardId !== null}
+                          onClick={() => void handleRedeemReward(reward.id)}
+                          style={pomodoroRedeemButton(canRedeem && redeemingRewardId === null)}
+                        >
+                          {isRedeeming
+                            ? 'Canjeando...'
+                            : canRedeem ? 'Canjear' : `Faltan ${reward.price_points - balance}`}
+                        </button>
+                      </div>
+                    </article>
+                  )
+                })
+              )}
+            </>
           ) : loading ? (
             <div style={emptyState}>Cargando tareas...</div>
           ) : orderedTasks.length === 0 ? (
@@ -942,6 +1011,30 @@ const taskList: CSSProperties = {
   padding: '10px',
 }
 
+const leisureSectionHeader: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '10px',
+  margin: '2px 2px 8px',
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: '9px',
+  color: '#7a6e61',
+  letterSpacing: '0.07em',
+  textTransform: 'uppercase',
+}
+
+const compactEmpty: CSSProperties = {
+  marginBottom: '10px',
+  padding: '13px 10px',
+  border: '1px dashed #2e2b27',
+  borderRadius: '7px',
+  color: '#5c5349',
+  fontSize: '11px',
+  fontStyle: 'italic',
+  textAlign: 'center',
+}
+
 function leisurePassCard(selected: boolean, active: boolean): CSSProperties {
   return {
     padding: '11px',
@@ -950,6 +1043,68 @@ function leisurePassCard(selected: boolean, active: boolean): CSSProperties {
     border: `1px solid ${selected ? '#d4943a' : '#2e2b27'}`,
     borderLeft: `3px solid ${active ? '#f0b855' : '#7a9e87'}`,
     background: selected ? '#251d12' : '#211f1c',
+  }
+}
+
+const pomodoroRewardCard: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  marginBottom: '8px',
+  padding: '11px',
+  border: '1px solid #3a332a',
+  borderLeft: '3px solid #d4943a',
+  borderRadius: '8px',
+  background: 'linear-gradient(135deg, #211d17, #191714)',
+}
+
+const rewardCopy: CSSProperties = {
+  minWidth: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+}
+
+const rewardDuration: CSSProperties = {
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: '8px',
+  color: '#8ab89a',
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+}
+
+const rewardTitle: CSSProperties = {
+  color: '#f0e6d3',
+  fontSize: '12px',
+  lineHeight: 1.35,
+  wordBreak: 'break-word',
+}
+
+const rewardRedeemColumn: CSSProperties = {
+  flexShrink: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-end',
+  gap: '6px',
+}
+
+const rewardPrice: CSSProperties = {
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: '10px',
+  color: '#f0b855',
+}
+
+function pomodoroRedeemButton(enabled: boolean): CSSProperties {
+  return {
+    minWidth: '76px',
+    padding: '6px 9px',
+    border: `1px solid ${enabled ? '#d4943a' : '#332f2a'}`,
+    borderRadius: '6px',
+    background: enabled ? '#2a1e0d' : '#181613',
+    color: enabled ? '#f0b855' : '#4a4540',
+    fontSize: '10px',
+    cursor: enabled ? 'pointer' : 'not-allowed',
   }
 }
 

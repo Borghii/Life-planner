@@ -21,12 +21,24 @@ function passStatus(pass: RewardPass) {
   return 'Cancelado'
 }
 
+function calculatedPrice(
+  durationMinutes: number,
+  hourlyPrice: number,
+  hourMinutes: number,
+) {
+  if (durationMinutes <= 0) return 0
+  return Math.max(1, Math.ceil(durationMinutes * hourlyPrice / hourMinutes))
+}
+
+const DURATION_PRESETS = [30, 60, 90, 120]
+
 export function RewardsPage() {
   const navigate = useNavigate()
   const {
     balance,
     pointsPerHour,
     defaultRewardPrice,
+    defaultRewardDurationMinutes,
     rewards,
     passes,
     movements,
@@ -44,19 +56,15 @@ export function RewardsPage() {
   const loadLeisurePass = usePomodoroStore((state) => state.loadLeisurePass)
   const clearLeisurePass = usePomodoroStore((state) => state.clearLeisurePass)
   const [name, setName] = useState('')
-  const [price, setPrice] = useState(defaultRewardPrice)
+  const [durationMinutes, setDurationMinutes] = useState(defaultRewardDurationMinutes)
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState<Reward | null>(null)
   const [editName, setEditName] = useState('')
-  const [editPrice, setEditPrice] = useState(defaultRewardPrice)
+  const [editDurationMinutes, setEditDurationMinutes] = useState(defaultRewardDurationMinutes)
 
   useEffect(() => {
     void refresh()
   }, [refresh])
-
-  useEffect(() => {
-    setPrice(defaultRewardPrice)
-  }, [defaultRewardPrice])
 
   const activeRewards = useMemo(
     () => rewards.filter((reward) => reward.active),
@@ -69,12 +77,12 @@ export function RewardsPage() {
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault()
-    if (!name.trim() || price <= 0 || saving) return
+    if (!name.trim() || durationMinutes <= 0 || saving) return
     setSaving(true)
     try {
-      await createReward(name.trim(), price)
+      await createReward(name.trim(), durationMinutes)
       setName('')
-      setPrice(defaultRewardPrice)
+      setDurationMinutes(defaultRewardDurationMinutes)
     } finally {
       setSaving(false)
     }
@@ -83,15 +91,15 @@ export function RewardsPage() {
   function beginEdit(reward: Reward) {
     setEditing(reward)
     setEditName(reward.name)
-    setEditPrice(reward.price_points)
+    setEditDurationMinutes(reward.duration_minutes)
   }
 
   async function saveEdit(event: React.FormEvent) {
     event.preventDefault()
-    if (!editing || !editName.trim() || editPrice <= 0 || saving) return
+    if (!editing || !editName.trim() || editDurationMinutes <= 0 || saving) return
     setSaving(true)
     try {
-      await updateReward(editing.id, editName.trim(), editPrice)
+      await updateReward(editing.id, editName.trim(), editDurationMinutes)
       setEditing(null)
     } finally {
       setSaving(false)
@@ -137,7 +145,7 @@ export function RewardsPage() {
           <span style={balanceLabel}>{balance < 0 ? 'Deuda actual' : 'Saldo disponible'}</span>
           <strong style={balanceValue(balance < 0)}>{balance} pts</strong>
           <span style={balanceHint}>
-            {balance < 0 ? 'Corrige la deuda antes de volver a canjear.' : 'Cada pase dura 60 minutos.'}
+            {balance < 0 ? 'Corrige la deuda antes de volver a canjear.' : 'El tiempo define el costo automaticamente.'}
           </span>
         </div>
       </header>
@@ -165,26 +173,49 @@ export function RewardsPage() {
                 style={input}
               />
             </label>
-            <label style={{ ...field, flex: '0 0 116px' }}>
-              <span style={fieldLabel}>Precio</span>
+            <label style={{ ...field, flex: '0 0 132px' }}>
+              <span style={fieldLabel}>Duracion (min)</span>
               <input
                 type="number"
                 min={1}
-                value={price}
-                onChange={(event) => setPrice(Number(event.currentTarget.value))}
+                value={durationMinutes}
+                onChange={(event) => setDurationMinutes(Number(event.currentTarget.value))}
                 style={input}
               />
             </label>
+            <div style={calculatedCost}>
+              <span style={fieldLabel}>Costo automatico</span>
+              <strong>
+                {calculatedPrice(
+                  durationMinutes,
+                  defaultRewardPrice,
+                  defaultRewardDurationMinutes,
+                )} pts
+              </strong>
+            </div>
             <button type="submit" disabled={saving || !name.trim()} style={primaryButton}>
               Crear
             </button>
           </form>
+          <div style={presetRow}>
+            <span style={fieldLabel}>Duraciones rapidas</span>
+            {DURATION_PRESETS.map((minutes) => (
+              <button
+                key={minutes}
+                type="button"
+                onClick={() => setDurationMinutes(minutes)}
+                style={presetButton(durationMinutes === minutes)}
+              >
+                {minutes < 60 ? `${minutes} min` : `${minutes / 60} h`}
+              </button>
+            ))}
+          </div>
 
           <div style={catalogGrid}>
             {loading && !initialized ? (
               <div style={empty}>Cargando economia...</div>
             ) : activeRewards.length === 0 ? (
-              <div style={empty}>Crea tu primera recompensa. El precio inicial sugerido es 30 pts.</div>
+              <div style={empty}>Crea tu primera recompensa indicando cuanto tiempo queres usar.</div>
             ) : (
               activeRewards.map((reward, index) => (
                 <motion.article
@@ -309,15 +340,30 @@ export function RewardsPage() {
             style={editModal}
           >
             <div style={eyebrow}>Editar recompensa</div>
-            <h2 style={{ ...panelTitle, fontSize: '30px' }}>Precio para futuros canjes</h2>
+            <h2 style={{ ...panelTitle, fontSize: '30px' }}>Tiempo para futuros canjes</h2>
             <label style={field}>
               <span style={fieldLabel}>Nombre</span>
               <input value={editName} onChange={(event) => setEditName(event.currentTarget.value)} style={input} />
             </label>
             <label style={field}>
-              <span style={fieldLabel}>Precio en puntos</span>
-              <input type="number" min={1} value={editPrice} onChange={(event) => setEditPrice(Number(event.currentTarget.value))} style={input} />
+              <span style={fieldLabel}>Duracion en minutos</span>
+              <input
+                type="number"
+                min={1}
+                value={editDurationMinutes}
+                onChange={(event) => setEditDurationMinutes(Number(event.currentTarget.value))}
+                style={input}
+              />
             </label>
+            <div style={editCostPreview}>
+              Costo calculado: <strong>
+                {calculatedPrice(
+                  editDurationMinutes,
+                  defaultRewardPrice,
+                  defaultRewardDurationMinutes,
+                )} pts
+              </strong>
+            </div>
             <p style={modalHint}>Los pases ya canjeados conservan el precio original.</p>
             <div style={modalActions}>
               <button type="button" onClick={() => setEditing(null)} style={ghostButton}>Cancelar</button>
@@ -392,6 +438,11 @@ const createForm: CSSProperties = { display: 'flex', alignItems: 'flex-end', gap
 const field: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 5, flex: '1 1 220px' }
 const fieldLabel: CSSProperties = { ...eyebrow, color: '#6f655a' }
 const input: CSSProperties = { width: '100%', minHeight: 38, padding: '8px 10px', border: '1px solid #37322c', borderRadius: 7, background: '#11100f', color: '#f0e6d3', outlineColor: '#d4943a', fontFamily: "'Plus Jakarta Sans', sans-serif" }
+const calculatedCost: CSSProperties = { minWidth: 126, minHeight: 38, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2, padding: '5px 10px', border: '1px solid #4a3923', borderRadius: 7, background: '#211a11', color: '#f0b855', fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }
+const presetRow: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderBottom: '1px solid #292621', flexWrap: 'wrap' }
+function presetButton(active: boolean): CSSProperties {
+  return { padding: '5px 9px', border: `1px solid ${active ? '#d4943a' : '#332f2a'}`, borderRadius: 999, background: active ? '#2a1e0d' : 'transparent', color: active ? '#f0b855' : '#7a6e61', fontSize: 10, cursor: 'pointer' }
+}
 const primaryButton: CSSProperties = { minHeight: 38, padding: '8px 16px', border: '1px solid #d4943a', borderRadius: 7, background: '#d4943a', color: '#11100f', fontWeight: 600, cursor: 'pointer' }
 const catalogGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 12, padding: 14 }
 const rewardCard: CSSProperties = { position: 'relative', minHeight: 162, padding: 16, border: '1px solid #3a332a', borderRadius: 10, background: 'linear-gradient(145deg, #211e19, #181613)', overflow: 'hidden' }
@@ -432,5 +483,6 @@ const empty: CSSProperties = { padding: 24, color: '#5c5349', fontSize: 12, font
 const errorBox: CSSProperties = { maxWidth: 1440, margin: '0 auto 14px', padding: '10px 12px', border: '1px solid #7d493b', borderRadius: 8, background: '#251612', color: '#d98a70' }
 const modalBackdrop: CSSProperties = { position: 'fixed', inset: 0, zIndex: 100, display: 'grid', placeItems: 'center', padding: 16, background: 'rgba(5,5,4,0.78)', backdropFilter: 'blur(5px)' }
 const editModal: CSSProperties = { width: 'min(100%, 430px)', display: 'grid', gap: 14, padding: 22, border: '1px solid #3a332a', borderRadius: 12, background: '#1a1917', boxShadow: '0 24px 80px rgba(0,0,0,0.45)' }
+const editCostPreview: CSSProperties = { padding: '10px 12px', border: '1px solid #4a3923', borderRadius: 7, background: '#211a11', color: '#c8a97e', fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }
 const modalHint: CSSProperties = { margin: 0, color: '#7a6e61', fontSize: 11 }
 const modalActions: CSSProperties = { display: 'flex', justifyContent: 'flex-end', gap: 8 }

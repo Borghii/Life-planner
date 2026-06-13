@@ -1232,6 +1232,13 @@ def utc_now():
     return dt.datetime.now(dt.timezone.utc)
 
 
+def reward_points_for_minutes(duration_minutes):
+    minutes = int(duration_minutes)
+    if minutes <= 0:
+        raise ValueError("La duracion debe ser mayor que cero")
+    return max(1, (minutes * DEFAULT_REWARD_PRICE + DEFAULT_REWARD_DURATION_MINUTES - 1) // DEFAULT_REWARD_DURATION_MINUTES)
+
+
 def utc_iso(value=None):
     return (value or utc_now()).isoformat()
 
@@ -1705,12 +1712,16 @@ def get_economy_api():
 def create_reward_api():
     data = request.get_json(silent=True) or {}
     name = str(data.get("name", "")).strip()
-    price_points = int(data.get("price_points", DEFAULT_REWARD_PRICE) or 0)
+    duration_minutes = int(
+        data.get("duration_minutes", DEFAULT_REWARD_DURATION_MINUTES) or 0
+    )
 
     if not name:
         return jsonify({"error": "El nombre es obligatorio"}), 400
-    if price_points <= 0:
-        return jsonify({"error": "El precio debe ser mayor que cero"}), 400
+    if duration_minutes <= 0:
+        return jsonify({"error": "La duracion debe ser mayor que cero"}), 400
+
+    price_points = reward_points_for_minutes(duration_minutes)
 
     now = utc_iso()
     conn = get_db()
@@ -1721,7 +1732,7 @@ def create_reward_api():
         )
         VALUES (?, ?, ?, 1, ?, ?)
         """,
-        (name, price_points, DEFAULT_REWARD_DURATION_MINUTES, now, now),
+        (name, price_points, duration_minutes, now, now),
     )
     conn.commit()
     row = conn.execute(
@@ -1745,23 +1756,27 @@ def update_reward_api(reward_id):
         return jsonify({"error": "Recompensa no encontrada"}), 404
 
     name = str(data.get("name", current["name"])).strip()
-    price_points = int(data.get("price_points", current["price_points"]) or 0)
+    duration_minutes = int(
+        data.get("duration_minutes", current["duration_minutes"]) or 0
+    )
     active = 1 if bool_from(data.get("active"), bool(current["active"])) else 0
 
     if not name:
         conn.close()
         return jsonify({"error": "El nombre es obligatorio"}), 400
-    if price_points <= 0:
+    if duration_minutes <= 0:
         conn.close()
-        return jsonify({"error": "El precio debe ser mayor que cero"}), 400
+        return jsonify({"error": "La duracion debe ser mayor que cero"}), 400
+
+    price_points = reward_points_for_minutes(duration_minutes)
 
     conn.execute(
         """
         UPDATE reward_catalog
-        SET name = ?, price_points = ?, active = ?, updated_at = ?
+        SET name = ?, price_points = ?, duration_minutes = ?, active = ?, updated_at = ?
         WHERE id = ?
         """,
-        (name, price_points, active, utc_iso(), reward_id),
+        (name, price_points, duration_minutes, active, utc_iso(), reward_id),
     )
     conn.commit()
     row = conn.execute(
