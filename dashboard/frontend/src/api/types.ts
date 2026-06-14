@@ -263,7 +263,7 @@ export interface RewardPass {
   cancelled_at: string | null
 }
 
-export interface PointMovement {
+export interface CoinMovement {
   id: number
   kind: string
   delta: number
@@ -279,5 +279,5 @@ export interface EconomyPayload {
   default_reward_duration_minutes: number
   rewards: Reward[]
   passes: RewardPass[]
-  movements: PointMovement[]
+  movements: CoinMovement[]
 }

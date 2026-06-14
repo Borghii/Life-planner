@@ -55,9 +55,16 @@ export interface ActiveLeisurePass {
   status: 'pending' | 'active'
 }
 
-interface AutoCompletedTask {
-  plan_dia_id: string
+export interface PomodoroCompletionEvent {
+  id: string
+  type: 'focus' | 'task'
+  plan_dia_id?: string
+  taskName: string
   completedAt: string
+  completedFocusSessions: number
+  totalFocusSessions: number
+  coinsDelta: number
+  balance: number
 }
 
 interface PomodoroStore {
@@ -72,7 +79,7 @@ interface PomodoroStore {
   activeTask: ActivePomodoroTask | null
   activeLeisurePass: ActiveLeisurePass | null
   leisureBusy: boolean
-  autoCompletedTask: AutoCompletedTask | null
+  completionEvent: PomodoroCompletionEvent | null
   completionError: string | null
   awaitingNextFocusConfirmation: boolean
 
@@ -90,7 +97,7 @@ interface PomodoroStore {
   clearLeisurePass: () => boolean
   finishLeisurePass: () => void
   syncLeisurePasses: (passes: RewardPass[]) => void
-  ackAutoCompletedTask: () => void
+  ackCompletionEvent: () => void
   confirmNextFocus: () => void
   deferNextFocus: () => void
   _tick: () => void
@@ -368,6 +375,7 @@ export const usePomodoroStore = create<PomodoroStore>()(
           taskName: activeTask?.name,
         }
         let completedTaskToMark: ActivePomodoroTask | null = null
+        let focusCompletionEvent: PomodoroCompletionEvent | null = null
         let nextActiveTask = activeTask
         let nextModeValue = nextMode(mode)
         let nextSecondsLeft = modeSeconds(nextModeValue)
@@ -382,6 +390,34 @@ export const usePomodoroStore = create<PomodoroStore>()(
               activeTask.totalFocusSessions,
             )
             nextActiveTask = { ...activeTask, completedFocusSessions }
+
+            if (completedFocusSessions >= activeTask.totalFocusSessions) {
+              completedTaskToMark = { ...activeTask, completedFocusSessions }
+              nextActiveTask = null
+            } else {
+              focusCompletionEvent = {
+                id: `${completedAtIso}-${activeTask.plan_dia_id}-focus`,
+                type: 'focus',
+                plan_dia_id: activeTask.plan_dia_id,
+                taskName: activeTask.name,
+                completedAt: completedAtIso,
+                completedFocusSessions,
+                totalFocusSessions: activeTask.totalFocusSessions,
+                coinsDelta: 0,
+                balance: useEconomyStore.getState().balance,
+              }
+            }
+          } else {
+            focusCompletionEvent = {
+              id: `${completedAtIso}-free-focus`,
+              type: 'focus',
+              taskName: 'Pomodoro libre',
+              completedAt: completedAtIso,
+              completedFocusSessions: 1,
+              totalFocusSessions: 1,
+              coinsDelta: 0,
+              balance: useEconomyStore.getState().balance,
+            }
           }
 
           nextModeValue = 'break'
@@ -392,10 +428,7 @@ export const usePomodoroStore = create<PomodoroStore>()(
           nextModeValue = 'focus'
           nextSecondsLeft = FOCUS_SECONDS
 
-          if (activeTask && activeTask.completedFocusSessions >= activeTask.totalFocusSessions) {
-            completedTaskToMark = activeTask
-            nextActiveTask = null
-          } else if (activeTask) {
+          if (activeTask) {
             awaitingNextFocusConfirmation = true
           }
         }
@@ -414,6 +447,7 @@ export const usePomodoroStore = create<PomodoroStore>()(
           activeTask: nextActiveTask,
           awaitingNextFocusConfirmation,
           completionError: null,
+          completionEvent: focusCompletionEvent,
           log: [...log, entry],
         })
 
@@ -422,14 +456,24 @@ export const usePomodoroStore = create<PomodoroStore>()(
             .then((result) => {
               useEconomyStore.getState().syncTaskCompletion(result)
               set({
-                autoCompletedTask: {
+                completionEvent: {
+                  id: `${completedAtIso}-${completedTaskToMark.plan_dia_id}-task`,
+                  type: 'task',
                   plan_dia_id: completedTaskToMark.plan_dia_id,
+                  taskName: completedTaskToMark.name,
                   completedAt: completedAtIso,
+                  completedFocusSessions: completedTaskToMark.completedFocusSessions,
+                  totalFocusSessions: completedTaskToMark.totalFocusSessions,
+                  coinsDelta: result.points_delta,
+                  balance: result.balance,
                 },
               })
             })
             .catch((error) => {
-              set({ completionError: errorMessage(error) })
+              set({
+                activeTask: completedTaskToMark,
+                completionError: errorMessage(error),
+              })
             })
         }
       }
@@ -443,7 +487,7 @@ export const usePomodoroStore = create<PomodoroStore>()(
         activeTask: null,
         activeLeisurePass: null,
         leisureBusy: false,
-        autoCompletedTask: null,
+        completionEvent: null,
         completionError: null,
         awaitingNextFocusConfirmation: false,
         soundEnabled: true,
@@ -708,8 +752,8 @@ export const usePomodoroStore = create<PomodoroStore>()(
           applyLeisurePass(serverPass)
         },
 
-        ackAutoCompletedTask: () => {
-          set({ autoCompletedTask: null })
+        ackCompletionEvent: () => {
+          set({ completionEvent: null })
         },
 
         confirmNextFocus: () => {

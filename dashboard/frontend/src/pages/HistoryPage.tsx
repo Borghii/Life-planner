@@ -4,6 +4,7 @@ import { useHistoryStore } from '../store/useHistoryStore'
 import { useEconomyStore } from '../store/useEconomyStore'
 import { heatLevels } from '../design/tokens'
 import type { HeatDay } from '../api/types'
+import { CoinAmount } from '../components/economy/CoinAmount'
 
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 const DAYS_MIN = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
@@ -52,7 +53,7 @@ function getYesterdayDateStr() {
 }
 
 export function HistoryPage() {
-  const pointsBalance = useEconomyStore((state) => state.balance)
+  const coinBalance = useEconomyStore((state) => state.balance)
   const {
     year,
     yearData,
@@ -123,13 +124,17 @@ export function HistoryPage() {
           </h1>
           <span style={{
             padding: '4px 9px',
-            border: `1px solid ${pointsBalance < 0 ? '#7d493b' : '#4a3923'}`,
+            border: `1px solid ${coinBalance < 0 ? '#7d493b' : '#4a3923'}`,
             borderRadius: '999px',
-            color: pointsBalance < 0 ? '#d98a70' : '#f0b855',
+            color: coinBalance < 0 ? '#d98a70' : '#f0b855',
             fontFamily: "'JetBrains Mono', monospace",
             fontSize: '10px',
           }}>
-            {pointsBalance} pts
+            <CoinAmount
+              value={coinBalance}
+              size="small"
+              tone={coinBalance < 0 ? 'negative' : 'gold'}
+            />
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button onClick={() => setYear(year - 1)} style={yearBtn}>

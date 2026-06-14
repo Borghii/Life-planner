@@ -2,6 +2,7 @@ import { type CSSProperties, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import type { Reward, RewardPass } from '../api/types'
+import { CoinAmount } from '../components/economy/CoinAmount'
 import { useEconomyStore } from '../store/useEconomyStore'
 import { usePomodoroStore } from '../store/usePomodoroStore'
 
@@ -36,7 +37,7 @@ export function RewardsPage() {
   const navigate = useNavigate()
   const {
     balance,
-    pointsPerHour,
+    coinsPerHour,
     defaultRewardPrice,
     defaultRewardDurationMinutes,
     rewards,
@@ -135,7 +136,11 @@ export function RewardsPage() {
     >
       <header style={hero}>
         <div>
-          <div style={eyebrow}>Economia personal · {pointsPerHour} pts por hora</div>
+          <div style={economyEyebrow}>
+            <span>Economia personal</span>
+            <CoinAmount value={coinsPerHour} size="small" />
+            <span>por hora</span>
+          </div>
           <h1 style={title}>Recompensas</h1>
           <p style={subtitle}>
             Tres horas de avance compran una hora de ocio. Los pases pendientes conservan reembolso.
@@ -143,7 +148,13 @@ export function RewardsPage() {
         </div>
         <div style={balanceCard(balance < 0)}>
           <span style={balanceLabel}>{balance < 0 ? 'Deuda actual' : 'Saldo disponible'}</span>
-          <strong style={balanceValue(balance < 0)}>{balance} pts</strong>
+          <div style={balanceAmount}>
+            <CoinAmount
+              value={balance}
+              size="large"
+              tone={balance < 0 ? 'negative' : 'gold'}
+            />
+          </div>
           <span style={balanceHint}>
             {balance < 0 ? 'Corrige la deuda antes de volver a canjear.' : 'El tiempo define el costo automaticamente.'}
           </span>
@@ -185,13 +196,14 @@ export function RewardsPage() {
             </label>
             <div style={calculatedCost}>
               <span style={fieldLabel}>Costo automatico</span>
-              <strong>
-                {calculatedPrice(
+              <CoinAmount
+                value={calculatedPrice(
                   durationMinutes,
                   defaultRewardPrice,
                   defaultRewardDurationMinutes,
-                )} pts
-              </strong>
+                )}
+                size="small"
+              />
             </div>
             <button type="submit" disabled={saving || !name.trim()} style={primaryButton}>
               Crear
@@ -229,7 +241,9 @@ export function RewardsPage() {
                   <div style={ticketNotchRight} />
                   <div style={rewardTop}>
                     <span style={duration}>{reward.duration_minutes} min</span>
-                    <strong style={priceText}>{reward.price_points} pts</strong>
+                    <strong style={priceText}>
+                      <CoinAmount value={reward.price_points} size="small" />
+                    </strong>
                   </div>
                   <h3 style={rewardName}>{reward.name}</h3>
                   <div style={rewardActions}>
@@ -249,7 +263,17 @@ export function RewardsPage() {
                       onClick={() => void handleRedeem(reward)}
                       style={redeemButton(balance >= reward.price_points)}
                     >
-                      {balance >= reward.price_points ? 'Canjear' : `Faltan ${reward.price_points - balance}`}
+                      {balance >= reward.price_points ? 'Canjear' : (
+                        <>
+                          Faltan
+                          <CoinAmount
+                            value={reward.price_points - balance}
+                            size="small"
+                            tone="muted"
+                            suffix=""
+                          />
+                        </>
+                      )}
                     </button>
                   </div>
                 </motion.article>
@@ -288,7 +312,7 @@ export function RewardsPage() {
                           onClick={() => void handleCancel(pass)}
                           style={refundButton}
                         >
-                          Cancelar · +{pass.price_points} pts
+                          Cancelar · <CoinAmount value={pass.price_points} showSign size="small" tone="positive" />
                         </button>
                       ) : null}
                       <button type="button" onClick={() => handleUsePass(pass)} style={useButton}>
@@ -310,7 +334,7 @@ export function RewardsPage() {
             </div>
             <div style={movementList}>
               {movements.length === 0 ? (
-                <div style={empty}>Todavia no hay puntos acreditados.</div>
+                <div style={empty}>Todavia no hay monedas acreditadas.</div>
               ) : (
                 movements.slice(0, 18).map((movement) => (
                   <div key={movement.id} style={movementRow}>
@@ -319,10 +343,13 @@ export function RewardsPage() {
                       <time style={movementDate}>{formatDate(movement.created_at)}</time>
                     </div>
                     <div style={movementNumbers}>
-                      <strong style={movementDelta(movement.delta)}>
-                        {movement.delta > 0 ? '+' : ''}{movement.delta}
-                      </strong>
-                      <span>{movement.balance_after} pts</span>
+                      <CoinAmount
+                        value={movement.delta}
+                        showSign
+                        size="small"
+                        tone={movement.delta >= 0 ? 'positive' : 'negative'}
+                      />
+                      <CoinAmount value={movement.balance_after} size="small" tone="muted" />
                     </div>
                   </div>
                 ))
@@ -356,13 +383,15 @@ export function RewardsPage() {
               />
             </label>
             <div style={editCostPreview}>
-              Costo calculado: <strong>
-                {calculatedPrice(
+              <span>Costo calculado:</span>
+              <CoinAmount
+                value={calculatedPrice(
                   editDurationMinutes,
                   defaultRewardPrice,
                   defaultRewardDurationMinutes,
-                )} pts
-              </strong>
+                )}
+                size="small"
+              />
             </div>
             <p style={modalHint}>Los pases ya canjeados conservan el precio original.</p>
             <div style={modalActions}>
@@ -399,6 +428,13 @@ const eyebrow: CSSProperties = {
   textTransform: 'uppercase',
   color: '#8b7e70',
 }
+const economyEyebrow: CSSProperties = {
+  ...eyebrow,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 7,
+  flexWrap: 'wrap',
+}
 
 const title: CSSProperties = {
   margin: '4px 0 6px',
@@ -424,9 +460,7 @@ function balanceCard(debt: boolean): CSSProperties {
 }
 
 const balanceLabel: CSSProperties = { ...eyebrow, color: '#c8a97e' }
-function balanceValue(debt: boolean): CSSProperties {
-  return { fontFamily: "'Cormorant Garamond', serif", fontSize: 46, lineHeight: 1, color: debt ? '#d98a70' : '#f0b855' }
-}
+const balanceAmount: CSSProperties = { marginTop: 7 }
 const balanceHint: CSSProperties = { marginTop: 5, fontSize: 11, color: '#7a6e61' }
 const mainGrid: CSSProperties = { maxWidth: 1440, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) minmax(320px, 0.85fr)', gap: 16, alignItems: 'start' }
 const sideColumn: CSSProperties = { display: 'grid', gap: 16 }
@@ -455,7 +489,7 @@ const rewardName: CSSProperties = { margin: '22px 0', fontFamily: "'Cormorant Ga
 const rewardActions: CSSProperties = { display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }
 const ghostButton: CSSProperties = { padding: '7px 9px', border: '1px solid #332f2a', borderRadius: 6, background: 'transparent', color: '#8b7e70', cursor: 'pointer', fontSize: 11 }
 function redeemButton(enabled: boolean): CSSProperties {
-  return { marginLeft: 'auto', padding: '7px 12px', border: `1px solid ${enabled ? '#d4943a' : '#332f2a'}`, borderRadius: 6, background: enabled ? '#2a1e0d' : '#181613', color: enabled ? '#f0b855' : '#4a4540', cursor: enabled ? 'pointer' : 'not-allowed', fontSize: 11 }
+  return { marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 12px', border: `1px solid ${enabled ? '#d4943a' : '#332f2a'}`, borderRadius: 6, background: enabled ? '#2a1e0d' : '#181613', color: enabled ? '#f0b855' : '#4a4540', cursor: enabled ? 'pointer' : 'not-allowed', fontSize: 11 }
 }
 const passList: CSSProperties = { display: 'grid', gap: 9, padding: 12 }
 function passCard(active: boolean): CSSProperties {
@@ -469,20 +503,17 @@ const passTime: CSSProperties = { fontFamily: "'JetBrains Mono', monospace", fon
 const passName: CSSProperties = { display: 'block', marginTop: 10, color: '#f0e6d3', fontSize: 14 }
 const passMeta: CSSProperties = { display: 'block', marginTop: 3, color: '#62594f', fontSize: 10 }
 const passActions: CSSProperties = { display: 'flex', gap: 7, marginTop: 12, flexWrap: 'wrap' }
-const refundButton: CSSProperties = { ...ghostButton, color: '#8ab89a', borderColor: '#34513d' }
+const refundButton: CSSProperties = { ...ghostButton, display: 'inline-flex', alignItems: 'center', gap: 5, color: '#8ab89a', borderColor: '#34513d' }
 const useButton: CSSProperties = { ...primaryButton, minHeight: 31, marginLeft: 'auto', padding: '6px 10px', fontSize: 11 }
 const movementList: CSSProperties = { maxHeight: 430, overflowY: 'auto', padding: '0 12px' }
 const movementRow: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, padding: '11px 2px', borderBottom: '1px solid #292621' }
 const movementDescription: CSSProperties = { color: '#c8a97e', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
 const movementDate: CSSProperties = { display: 'block', marginTop: 3, color: '#5c5349', fontFamily: "'JetBrains Mono', monospace", fontSize: 8 }
 const movementNumbers: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0, color: '#62594f', fontFamily: "'JetBrains Mono', monospace", fontSize: 8 }
-function movementDelta(delta: number): CSSProperties {
-  return { fontSize: 13, color: delta >= 0 ? '#8ab89a' : '#d98a70' }
-}
 const empty: CSSProperties = { padding: 24, color: '#5c5349', fontSize: 12, fontStyle: 'italic', textAlign: 'center' }
 const errorBox: CSSProperties = { maxWidth: 1440, margin: '0 auto 14px', padding: '10px 12px', border: '1px solid #7d493b', borderRadius: 8, background: '#251612', color: '#d98a70' }
 const modalBackdrop: CSSProperties = { position: 'fixed', inset: 0, zIndex: 100, display: 'grid', placeItems: 'center', padding: 16, background: 'rgba(5,5,4,0.78)', backdropFilter: 'blur(5px)' }
 const editModal: CSSProperties = { width: 'min(100%, 430px)', display: 'grid', gap: 14, padding: 22, border: '1px solid #3a332a', borderRadius: 12, background: '#1a1917', boxShadow: '0 24px 80px rgba(0,0,0,0.45)' }
-const editCostPreview: CSSProperties = { padding: '10px 12px', border: '1px solid #4a3923', borderRadius: 7, background: '#211a11', color: '#c8a97e', fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }
+const editCostPreview: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 12px', border: '1px solid #4a3923', borderRadius: 7, background: '#211a11', color: '#c8a97e', fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }
 const modalHint: CSSProperties = { margin: 0, color: '#7a6e61', fontSize: 11 }
 const modalActions: CSSProperties = { display: 'flex', justifyContent: 'flex-end', gap: 8 }

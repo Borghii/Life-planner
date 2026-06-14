@@ -1,6 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useEconomyStore } from '../../store/useEconomyStore'
 
 const links = [
   { to: '/', label: 'Hoy' },
@@ -14,7 +13,6 @@ const links = [
 
 export function Navigation() {
   const { pathname } = useLocation()
-  const balance = useEconomyStore((state) => state.balance)
 
   return (
     <nav
@@ -92,23 +90,6 @@ export function Navigation() {
         })}
       </div>
 
-      <Link
-        to="/recompensas"
-        style={{
-          marginLeft: 'auto',
-          flexShrink: 0,
-          padding: '5px 10px',
-          border: `1px solid ${balance < 0 ? '#7d493b' : '#4a3923'}`,
-          borderRadius: '999px',
-          background: balance < 0 ? '#251612' : '#211a11',
-          color: balance < 0 ? '#d98a70' : '#f0b855',
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: '10px',
-          textDecoration: 'none',
-        }}
-      >
-        {balance} pts
-      </Link>
     </nav>
   )
 }

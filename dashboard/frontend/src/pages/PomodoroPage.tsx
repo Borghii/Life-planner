@@ -2,6 +2,8 @@ import { type CSSProperties, useCallback, useEffect, useMemo, useState } from 'r
 import { motion } from 'framer-motion'
 import { getDayPlan } from '../api/planning'
 import type { PlanTask } from '../api/types'
+import { CoinAmount } from '../components/economy/CoinAmount'
+import { PomodoroCelebration } from '../components/economy/PomodoroCelebration'
 import { Modal } from '../components/ui/Modal'
 import { useEconomyStore } from '../store/useEconomyStore'
 import {
@@ -141,7 +143,7 @@ export function PomodoroPage() {
     activeTask,
     activeLeisurePass,
     leisureBusy,
-    autoCompletedTask,
+    completionEvent,
     completionError,
     awaitingNextFocusConfirmation,
     startTimer,
@@ -158,7 +160,7 @@ export function PomodoroPage() {
     clearLeisurePass,
     finishLeisurePass,
     syncLeisurePasses,
-    ackAutoCompletedTask,
+    ackCompletionEvent,
     confirmNextFocus,
     deferNextFocus,
   } = usePomodoroStore()
@@ -205,13 +207,13 @@ export function PomodoroPage() {
   }, [economyInitialized, passes, syncLeisurePasses])
 
   useEffect(() => {
-    if (!autoCompletedTask) return
+    if (completionEvent?.type !== 'task') return
+    void refreshTasks()
+  }, [completionEvent, refreshTasks])
 
-    setNotice('Tarea completada automaticamente.')
-    void refreshTasks().finally(() => {
-      ackAutoCompletedTask()
-    })
-  }, [ackAutoCompletedTask, autoCompletedTask, refreshTasks])
+  const closeCelebration = useCallback(() => {
+    ackCompletionEvent()
+  }, [ackCompletionEvent])
 
   useEffect(() => {
     if (!activeTask || running || loading) return
@@ -395,7 +397,7 @@ export function PomodoroPage() {
             </>
           ) : (
             <>
-              <span>{balance} pts</span>
+              <CoinAmount value={balance} size="small" />
               <span>{leisurePasses.length} disponibles</span>
             </>
           )}
@@ -452,7 +454,7 @@ export function PomodoroPage() {
 
               <div style={{ ...leisureSectionHeader, marginTop: 14 }}>
                 <span>Canjear recompensa</span>
-                <span>{balance} pts</span>
+                <CoinAmount value={balance} size="small" />
               </div>
               {activeRewards.length === 0 ? (
                 <div style={compactEmpty}>
@@ -469,7 +471,9 @@ export function PomodoroPage() {
                         <strong style={rewardTitle}>{reward.name}</strong>
                       </div>
                       <div style={rewardRedeemColumn}>
-                        <strong style={rewardPrice}>{reward.price_points} pts</strong>
+                        <strong style={rewardPrice}>
+                          <CoinAmount value={reward.price_points} size="small" />
+                        </strong>
                         <button
                           type="button"
                           disabled={!canRedeem || redeemingRewardId !== null}
@@ -478,7 +482,17 @@ export function PomodoroPage() {
                         >
                           {isRedeeming
                             ? 'Canjeando...'
-                            : canRedeem ? 'Canjear' : `Faltan ${reward.price_points - balance}`}
+                            : canRedeem ? 'Canjear' : (
+                              <>
+                                Faltan
+                                <CoinAmount
+                                  value={reward.price_points - balance}
+                                  size="small"
+                                  tone="muted"
+                                  suffix=""
+                                />
+                              </>
+                            )}
                         </button>
                       </div>
                     </article>
@@ -738,7 +752,9 @@ export function PomodoroPage() {
             <h2 style={panelTitle}>Hoy</h2>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <div style={focusCount}>{balance} pts</div>
+            <div style={focusCount}>
+              <CoinAmount value={balance} size="small" />
+            </div>
             <div style={focusCount}>
               {focusToday.length} foco{focusToday.length !== 1 ? 's' : ''}
             </div>
@@ -866,6 +882,11 @@ export function PomodoroPage() {
           </div>
         </div>
       </Modal>
+
+      <PomodoroCelebration
+        event={completionEvent}
+        onClose={closeCelebration}
+      />
     </motion.div>
   )
 }
@@ -1098,6 +1119,10 @@ const rewardPrice: CSSProperties = {
 function pomodoroRedeemButton(enabled: boolean): CSSProperties {
   return {
     minWidth: '76px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '5px',
     padding: '6px 9px',
     border: `1px solid ${enabled ? '#d4943a' : '#332f2a'}`,
     borderRadius: '6px',

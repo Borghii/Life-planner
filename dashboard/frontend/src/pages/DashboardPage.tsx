@@ -16,6 +16,7 @@ import { MiniCalendar } from '../components/dashboard/MiniCalendar'
 import { ReminderList } from '../components/dashboard/ReminderList'
 import { LifeObjectives } from '../components/dashboard/LifeObjectives'
 import { AdaptPlanModal } from '../components/dashboard/AdaptPlanModal'
+import { CoinAmount } from '../components/economy/CoinAmount'
 
 function toMonthStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -39,7 +40,7 @@ export function DashboardPage() {
   } = useDashboardStore()
   const { config, fetch: fetchConfig } = useConfigStore()
   const pomodoroRunning = usePomodoroStore((s) => s.running)
-  const pointsBalance = useEconomyStore((s) => s.balance)
+  const coinBalance = useEconomyStore((s) => s.balance)
   const loadPomodoroTask = usePomodoroStore((s) => s.loadTask)
   const startPomodoroTimer = usePomodoroStore((s) => s.startTimer)
   const [adaptOpen, setAdaptOpen] = useState(false)
@@ -116,13 +117,17 @@ export function DashboardPage() {
             <ClockDisplay compact />
             <span style={{
               padding: '3px 8px',
-              border: `1px solid ${pointsBalance < 0 ? '#7d493b' : '#4a3923'}`,
+              border: `1px solid ${coinBalance < 0 ? '#7d493b' : '#4a3923'}`,
               borderRadius: '999px',
-              color: pointsBalance < 0 ? '#d98a70' : '#f0b855',
+              color: coinBalance < 0 ? '#d98a70' : '#f0b855',
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: '9px',
             }}>
-              {pointsBalance} pts
+              <CoinAmount
+                value={coinBalance}
+                size="small"
+                tone={coinBalance < 0 ? 'negative' : 'gold'}
+              />
             </span>
           </div>
         </div>

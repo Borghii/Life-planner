@@ -9,7 +9,7 @@ import {
 } from '../api/economy'
 import type {
   EconomyPayload,
-  PointMovement,
+  CoinMovement,
   Reward,
   RewardPass,
   TaskCompletionResult,
@@ -17,12 +17,12 @@ import type {
 
 interface EconomyStore {
   balance: number
-  pointsPerHour: number
+  coinsPerHour: number
   defaultRewardPrice: number
   defaultRewardDurationMinutes: number
   rewards: Reward[]
   passes: RewardPass[]
-  movements: PointMovement[]
+  movements: CoinMovement[]
   loading: boolean
   initialized: boolean
   error: string | null
@@ -42,7 +42,7 @@ function message(error: unknown) {
 function applyPayload(payload: EconomyPayload) {
   return {
     balance: payload.balance,
-    pointsPerHour: payload.points_per_hour,
+    coinsPerHour: payload.points_per_hour,
     defaultRewardPrice: payload.default_reward_price,
     defaultRewardDurationMinutes: payload.default_reward_duration_minutes,
     rewards: payload.rewards,
@@ -56,7 +56,7 @@ function applyPayload(payload: EconomyPayload) {
 
 export const useEconomyStore = create<EconomyStore>((set, get) => ({
   balance: 0,
-  pointsPerHour: 10,
+  coinsPerHour: 10,
   defaultRewardPrice: 30,
   defaultRewardDurationMinutes: 60,
   rewards: [],
